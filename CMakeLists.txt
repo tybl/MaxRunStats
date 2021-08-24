@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.14) # FetchContent_MakeAvailable
 
 project(MaxRunStats
   VERSION 0.0.1
-  DESCRIPTION "Parse TCS files into a CSV file that contains your best time for all distances"
+  DESCRIPTION "Parse TCX files into a graph representing your distance versus time"
   LANGUAGES CXX)
 
 option(BUILD_ALL_TESTS "Build and run tests as a subproject" OFF)
@@ -16,6 +16,9 @@ endif()
 include(FetchContent)
 include(util/cmake/CompilerSettings.cmake)
 include(util/cmake/Linters.cmake)
+
+find_package(SFML COMPONENTS graphics REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # Use doctest as unit test framework
 FetchContent_Declare(doctest
@@ -31,7 +34,7 @@ FetchContent_Declare(pugixml
   GIT_TAG        "v1.10")
 FetchContent_MakeAvailable(pugixml)
 
-# Use pugixml to parse XML
+
 FetchContent_Declare(date
   GIT_REPOSITORY https://github.com/HowardHinnant/date.git
   GIT_SHALLOW    TRUE
