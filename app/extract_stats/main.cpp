@@ -21,8 +21,9 @@ std::chrono::system_clock::time_point ParseTime(std::string const& str_time) {
   return dt;
 }
 
-std::vector<Eigen::Vector2d> ReadFile(std::string const& filename) {
-  std::vector<Eigen::Vector2d> result;
+std::vector<sf::Vertex> ReadFile(std::string const& filename, uint8_t alpha) {
+  std::vector<sf::Vertex> result;
+
   pugi::xml_document doc;
   if (!doc.load_file(filename.c_str())) return result;
   auto const& activities = doc.child("TrainingCenterDatabase").child("Activities");
@@ -34,29 +35,28 @@ std::vector<Eigen::Vector2d> ReadFile(std::string const& filename) {
       activity_start_time = std::min(activity_start_time, lap_start_time);
       auto const& track = lap.child("Track");
       for (auto const& track_point : track.children("Trackpoint")) {
-        auto distance = track_point.child("DistanceMeters").text().as_double();
-        std::chrono::duration<double> elapsed_time = ParseTime(track_point.child("Time").child_value()) - activity_start_time;
-        result.emplace_back(distance, elapsed_time.count());
+        auto distance = track_point.child("DistanceMeters").text().as_float();
+        std::chrono::duration<float> elapsed_time = ParseTime(track_point.child("Time").child_value()) - activity_start_time;
+        result.emplace_back(sf::Vector2f(distance, elapsed_time.count()), sf::Color(255,255,255,alpha));
       }
     }
   }
   return result;
 }
 
-void TransformData(std::vector<Eigen::Vector2d>& data) {
-  // Get min/max x/y
-  double min_x = 0;
-  double min_y = 0;
-  double max_x = 0;
-  double max_y = 0;
-  for (auto const& v : data) {
-    min_x = std::min(min_x, v(0));
-    min_y = std::min(min_y, v(1));
-    max_x = std::max(max_x, v(0));
-    max_y = std::max(max_y, v(1));
+sf::Rect<float> GetViewRect(std::vector<std::vector<sf::Vertex>> const& data) {
+  sf::Rect<float> result;
+  for (auto const& line : data) {
+    for (auto const& vert : line) {
+      result.left = std::max(result.left, vert.position.x);
+      result.top = std::max(result.top, vert.position.y);
+    }
   }
-  Eigen::Matrix2d rot;
-  //rot << 
+  result.left += 100.0;
+  result.top += 100.0;
+  result.width = -1 * (result.left + 200.0);
+  result.height = -1 * (result.top + 200.0);
+  return result;
 }
 
 // Open window
@@ -66,29 +66,44 @@ void TransformData(std::vector<Eigen::Vector2d>& data) {
 // draw data
 
 int main(int argc, char const* argv[]) {
-    // create the window
-    sf::RenderWindow window(sf::VideoMode(800, 600), "My window");
+  std::vector<std::vector<sf::Vertex>> lines;
+  for (int i = 1; i < argc; ++i) {
+    std::string filename(argv[i]);
+    std::cerr << filename << "\n";
+    lines.push_back(ReadFile(filename, 256 - 4*i));
+  }
+  // create the window
+  sf::RenderWindow window(sf::VideoMode(800, 600), "Run Stats");
 
-    // run the program as long as the window is open
-    while (window.isOpen()) {
-        // check all the window's events that were triggered since the last iteration of the loop
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            // "close requested" event: we close the window
-            if (event.type == sf::Event::Closed) window.close();
-        }
+  sf::View view(GetViewRect(lines));
 
-        // clear the window with black color
-        window.clear(sf::Color::Black);
+  sf::Transform const& tf = view.getTransform();
 
-        // draw everything here...
-        // window.draw(...);
+  // run the program as long as the window is open
+  while (window.isOpen()) {
+    // check all the window's events that were triggered since the last iteration of the loop
+    sf::Event event;
 
-        // end the current frame
-        window.display();
+    // clear the window with black color
+    window.clear(sf::Color::Black);
+
+    window.setView(view);
+    for (auto const& l : lines) {
+      window.draw(&l[0], l.size(), sf::LineStrip);
     }
+    // draw everything here...
+    // window.draw(...);
 
-    return 0;
+    // end the current frame
+    window.display();
+
+    if (window.waitEvent(event)) {
+      // "close requested" event: we close the window
+      if (event.type == sf::Event::Closed) window.close();
+    }
+  }
+
+  return 0;
 }
 
 #if 0
