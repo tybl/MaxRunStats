@@ -23,7 +23,9 @@ auto main(int argc, char const* argv[]) -> int {
   std::map<int, std::map<int, std::chrono::duration<double>>> table;
   for (int i = 1; i < argc; ++i) {
     pugi::xml_document doc;
-    if (!doc.load_file(argv[i])) continue;
+    if (!doc.load_file(argv[i])) {
+      continue;
+    }
     auto const& activities = doc.child("TrainingCenterDatabase").child("Activities");
 
     for (auto const& activity : activities.children("Activity")) {
@@ -34,7 +36,8 @@ auto main(int argc, char const* argv[]) -> int {
         auto const& track = lap.child("Track");
         for (auto const& track_point : track.children("Trackpoint")) {
           int distance = track_point.child("DistanceMeters").text().as_int();
-          std::chrono::duration<double> elapsed_time = ParseTime(track_point.child("Time").child_value()) - activity_start_time;
+          std::chrono::duration<double> elapsed_time =
+              ParseTime(track_point.child("Time").child_value()) - activity_start_time;
           table[distance][i] = elapsed_time;
         }
       }
