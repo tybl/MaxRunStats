@@ -11,9 +11,9 @@
 #include <string>
 #include <vector>
 
-std::chrono::system_clock::time_point ParseTime(std::string const& str_time) {
+std::chrono::system_clock::time_point parse_time(std::string const& p_str_time) {
   std::chrono::system_clock::time_point dt;
-  std::stringstream ss(str_time);
+  std::stringstream ss(p_str_time);
   ss >> date::parse("%FT%T", dt);
   return dt;
 }
@@ -31,13 +31,13 @@ auto main(int argc, char const* argv[]) -> int {
     for (auto const& activity : activities.children("Activity")) {
       auto activity_start_time = std::chrono::system_clock::now();
       for (auto const& lap : activity.children("Lap")) {
-        auto lap_start_time = ParseTime(lap.attribute("StartTime").as_string());
+        auto lap_start_time = parse_time(lap.attribute("StartTime").as_string());
         activity_start_time = std::min(activity_start_time, lap_start_time);
         auto const& track = lap.child("Track");
         for (auto const& track_point : track.children("Trackpoint")) {
           int distance = track_point.child("DistanceMeters").text().as_int();
           std::chrono::duration<double> elapsed_time =
-              ParseTime(track_point.child("Time").child_value()) - activity_start_time;
+              parse_time(track_point.child("Time").child_value()) - activity_start_time;
           table[distance][i] = elapsed_time;
         }
       }
